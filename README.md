@@ -35,4 +35,4 @@ treatments offered by each physician. One physician may just work one or two day
 data covering at least 5 physicians and 15 patients, which can then be displayed and used for testing. 
 These pre-registered data can be hard coded in your program or read from external files. The system 
 should also allow new patients to be registered and then book the appointments. Visitors use the system 
-to book consultation appointments but don’t need to be registered.
+to book consultation appointments but don’t need to be registered.  
