@@ -1,70 +1,106 @@
 package com.psic;
 
-import java.awt.print.Book;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
-import java.util.Scanner;
 
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
+
+import com.psic.junit.TestClass;
 import com.psic.manager.AppointmentManager;
 import com.psic.pojo.Appointment;
+import com.psic.utils.Utils;
 
 public class MainClass {
-	static Scanner sc;
 	
-	public static void main(String[] args) {
-		sc = new Scanner(System.in);
+	public static void main(String[] args) throws  IOException {
+		Utils.br = new BufferedReader(new InputStreamReader(System.in));
 		while(true) {
-			System.out.println("1. Book appointment as a patient.");
-			System.out.println("2. Book appointment as a visitor.");
-			System.out.println("3. Register as a new patient.");
-			System.out.println("4. Cancel an appointment.");
-			System.out.println("5. Generate report of all appointments.");
-			System.out.println("6. Generate report of appointments each patient has booked, attended, cancelled, and missed.");
-			System.out.println("7. Exit");
-			System.out.print("Please select one of the above options: ");
+			try {
+
+				System.out.println("1. Book appointment as a patient.");
+				System.out.println("2. Book appointment as a visitor.");
+				System.out.println("3. Register as a new patient.");
+				System.out.println("4. Cancel an appointment.");
+				System.out.println("5. Attend an appointment");
+				System.out.println("6. Generate report of all appointments.");
+				System.out.println("7. Generate report of appointments each patient has booked, attended, cancelled, and missed.");
+				System.out.println("8. Exit");
+				System.out.print("Please select one of the above options: ");
+				
+				int input = Utils.readInteger();
+				if(input==8) {
+					Utils.br.close();
+					System.exit(0);
+				}
+				else if(input == 3) {
+					registerNewPatient();
+				}
+				else if(input==1) {
+					bookPatientAppointment();
+				}
+				else if(input==4) {
+					cancelAppointment();
+				}
+				else if(input==2) {
+					bookVisitorAppointment();
+				}
+				else if(input ==5) {
+					markAppointment();
+				}
+				else if(input==6) {
+					AppointmentManager.getInstance().generateReport();
+				}
+				else if(input== 7) {
+					AppointmentManager.getInstance().generatePatientsReport();
+				}
+				else {
+					System.out.println("Incorrect input. Please enter inputs from 1-8");
+					Thread.sleep(2000);
+				}
 			
-			int input = sc.nextInt();
-			if(input==7) {
-				System.exit(0);
+			}catch(Exception e) {
+				System.out.println("Unknown excepton "+e.getMessage()+" occured during processing. Please try again.");
 			}
-			if(input == 3) {
-				registerNewPatient();
-			}
-			if(input==1) {
-				bookPatientAppointment();
-			}
-			if(input==4) {
-				cancelAppointment();
-			}
+			
 		}
 	}
 	
 	public static void bookPatientAppointment() {
 		System.out.print("Please enter patient ID: ");
-		int id = sc.nextInt();
+		int id = Utils.readInteger();
 		if(!AppointmentManager.getInstance().verifyPatient(id)) {
 			System.out.println("No patients found with id "+id);
 		}
 		else {
 			AppointmentManager.getInstance().bookAppointment(id);
 		}
-		
-		
+				
 	}
 	
-	public void bookVisitorAppointment() {
+	public static void bookVisitorAppointment() {
+		System.out.print("Please enter visitor name: ");
+		
+		String name = Utils.readString();
+		System.out.print("Please enter date on which you want to book appointment: ");
+		String date = Utils.readString();
+		AppointmentManager.getInstance().bookVisitorAppointment(name, date);
 		
 	}
 	
 	public static void registerNewPatient() {
 		System.out.print("Please enter id: ");
-		int id = sc.nextInt();
+		int id = Utils.readInteger();
 		System.out.print("Please enter full name: ");
-		sc.nextLine();
-		String name = sc.nextLine();
+		//Utils.scanner.nextLine();
+		String name = Utils.readString();
 		System.out.print("Please enter address: ");
-		String address = sc.nextLine();
+		String address = Utils.readString();
 		System.out.print("Please enter number: ");
-		String number = sc.nextLine();
+		String number = Utils.readString();
 		if(AppointmentManager.getInstance().registerNewPatient(id, name, address, number)) {
 			System.out.println("Patient registered successfully");
 		}else {
@@ -76,30 +112,18 @@ public class MainClass {
 	
 	public static void cancelAppointment() {
 		System.out.print("Please enter your Patient ID: ");
-		int id = sc.nextInt();
-		List<Appointment> appointments = AppointmentManager.getInstance().getAppointmentsByPatientID(id);
-		if(appointments==null) {
-			System.out.println("No Active appointments are there for this Patient.");
-			return;
-		}
+		int id = Utils.readInteger();
 		System.out.print("Please enter Appointment ID you want to cancel: ");
-		int appID = sc.nextInt();
-		for(Appointment app: appointments) {
-			if(app.getAppointmentID() == appID) {
-				AppointmentManager.getInstance().cancelAppointment(app);
-				System.out.println("Your Appointment has been cancelled successfully.");
-			}
-		}
+		int appID = Utils.readInteger();
+		AppointmentManager.getInstance().cancelAppointment(id, appID);
 	}
 	
-	public void generateReport() {
-		
-	}
-	
-	public void generatePatientReport() {
-		
-	}
-	
-	
+	public static void markAppointment() {
+		System.out.print("Please enter Patient ID: ");
+		int id = Utils.readInteger();
+		System.out.print("Please enter Appointment ID");
+		int appointmentID = Utils.readInteger();
+		AppointmentManager.getInstance().markAppointment(id, appointmentID);
+	}	
 
 }
