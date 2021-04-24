@@ -8,6 +8,7 @@ public class Appointment {
 	private int physicianID;
 	private String physicianName;
 	private int patientID;
+	private String patientName;
 	private String treatment;
 	private String appointmentDate;
 	private String timing;
@@ -84,6 +85,18 @@ public class Appointment {
 	}
 	public void setNotes(String notes) {
 		this.notes = notes;
+	}
+	public static int getMax() {
+		return max;
+	}
+	public static void setMax(int max) {
+		Appointment.max = max;
+	}
+	public String getPatientName() {
+		return patientName;
+	}
+	public void setPatientName(String patientName) {
+		this.patientName = patientName;
 	}
 	
 	

@@ -1,21 +1,25 @@
 package com.psic.manager;
 
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.stream.Collectors;
+
+import org.junit.Before;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.psic.pojo.Appointment;
 import com.psic.pojo.Patient;
 import com.psic.pojo.Physician;
+import com.psic.pojo.VisitorAppointment;
 import com.psic.utils.Constants;
+import com.psic.utils.PrintTable;
 import com.psic.utils.Utils;
 
 public class AppointmentManager {
+	
 	
 	static AppointmentManager manager;
 	
@@ -27,6 +31,11 @@ public class AppointmentManager {
 	List<String> treatments;
 	Map<String,Map<Integer,List<Appointment>>> appointments;
 	Map<Integer,List<Appointment>> appointmentsByPatient;
+	Map<String,Map<String,List<Appointment>>> roomToAppointment;
+	
+	public int patientsSize() {
+		return patients.size();
+	}
 	
 	public static AppointmentManager getInstance() {
 		if(manager==null) {
@@ -89,6 +98,10 @@ public class AppointmentManager {
 		appointments = new HashMap<>();
 		appointmentsByPatient = new HashMap<>();
 		
+		roomToAppointment = new HashMap<>();
+		
+		visitorAppointments = new HashMap<>();
+		
 	}
 	
 	public void generatePhysiciansData() {
@@ -108,8 +121,6 @@ public class AppointmentManager {
 		expToTreat1.get(Constants.physioTherapy).add(Constants.massage);
 		expToTreat1.get(Constants.osteopathy).add(Constants.neuralMobil);
 		pys1.setExpToTreatments(expToTreat1);
-		
-		
 		
 		Map<Integer,List<String>> timings = new HashMap<>();
 		
@@ -133,10 +144,22 @@ public class AppointmentManager {
             }} );
 		
 		pys1.setTimings(timings);
+		
+		List<String> consultHours = new ArrayList<>(); 
+		consultHours.add("10:00");
+		consultHours.add("10:30");
+		consultHours.add("11:00");
+		consultHours.add("11:30");
+		Map<Integer, List<String>> consult1 = new HashMap<>();
+		consult1.put(4, consultHours);
+		pys1.setConsultationHours(consult1);
+		
 		physicians.put(pys1.getId(), pys1);
 		
 		physiciansByExpertise.get(Constants.physioTherapy).add(pys1);
 		physiciansByExpertise.get(Constants.osteopathy).add(pys1);
+		
+		
 		
 		Physician pys2 = new Physician(1002, "James Joseph", "ABC", "1321434982");
 		pys2.addExpertise(Constants.physioTherapy);
@@ -175,6 +198,10 @@ public class AppointmentManager {
             }} );
 		
 		pys2.setTimings(timings2);
+		Map<Integer, List<String>> consult2 = new HashMap<>();
+		consult2.put(3, consultHours);
+		pys2.setConsultationHours(consult2);
+		
 		physicians.put(pys2.getId(), pys2);
 		physiciansByExpertise.get(Constants.rehabilation).add(pys2);
 		physiciansByExpertise.get(Constants.physioTherapy).add(pys2);
@@ -214,10 +241,15 @@ public class AppointmentManager {
             }} );
 		
 		pys3.setTimings(timings3);
+		
+		Map<Integer, List<String>> consult3 = new HashMap<>();
+		consult3.put(2, consultHours);
+		pys3.setConsultationHours(consult3);
+		
 		physicians.put(pys3.getId(), pys3);
 		physiciansByExpertise.get(Constants.osteopathy).add(pys3);
 		
-		Physician pys4 = new Physician(1003, "John Abraham", "London", "6961592913");
+		Physician pys4 = new Physician(1004, "John Abraham", "London", "6961592913");
 		pys4.addExpertise(Constants.physioTherapy);
 		
 		pys4.addTreatment(Constants.massage);
@@ -252,6 +284,11 @@ public class AppointmentManager {
             }} );
 		
 		pys4.setTimings(timings4);
+		
+		Map<Integer, List<String>> consult4 = new HashMap<>();
+		consult4.put(6, consultHours);
+		pys4.setConsultationHours(consult4);
+		
 		physicians.put(pys4.getId(), pys4);
 		physiciansByExpertise.get(Constants.physioTherapy).add(pys4);
 		
@@ -294,6 +331,11 @@ public class AppointmentManager {
             }} );
 		
 		pys5.setTimings(timings5);
+		
+		Map<Integer, List<String>> consult5 = new HashMap<>();
+		consult5.put(5, consultHours);
+		pys5.setConsultationHours(consult5);
+		
 		physicians.put(pys5.getId(), pys5);
 		physiciansByExpertise.get(Constants.rehabilation).add(pys5);
 		physiciansByExpertise.get(Constants.osteopathy).add(pys5);
@@ -323,12 +365,11 @@ public class AppointmentManager {
 		System.out.println("1. Look for treatments by expertise");
 		System.out.println("2. Look for the physicians");
 		System.out.print("Select 1 or 2: ");
-		Scanner sc = new Scanner(System.in);
-		int option = sc.nextInt();
+		int option = Utils.readInteger();
 		if(option == 1) {
 			bookAppointmentByExpertise(patientID);
 		}else if(option == 2) {
-			
+			bookAppointmentByPhysician(patientID);
 		}
 	}
 	
@@ -337,12 +378,21 @@ public class AppointmentManager {
 			System.out.println(i+1+". "+expertises.get(i));
 		}
 		System.out.print("Please select the expertise: ");
-		Scanner sc = new Scanner(System.in);
-		int option = sc.nextInt();
+		int option = Utils.readInteger();
 		String exp = expertises.get(option-1);
 		System.out.print("Please enter the date on which you are looking to book appointment in dd-mm-yyyy format: ");
-		String date = sc.next();
-		boolean isValid = Utils.validateDate(date);
+		String date = Utils.readString();
+		boolean isValid =false;
+		try {
+			isValid = Utils.validateDate(date);
+		}catch(Exception e) {
+			System.out.println("Date entered is not valid. Please try again and enter valid date");
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+		}
 		if(!isValid) {
 			return;
 		}
@@ -354,39 +404,169 @@ public class AppointmentManager {
 			List<String> timings = phy.getTimings().get(day);
 			if(timings==null)
 				continue;
-			List<Appointment> apps = null;
-			if(appointments.get(date)!=null)
-				apps= appointments.get(date).get(phy.getId());
-			for(String time: timings) {
-				if(apps==null || verifyAvailability(time, apps)) {
-					for(String treatment: phy.getExpToTreatments().get(exp)) {
-						Appointment appointment = new Appointment();
-						appointment.setPhysicianID(phy.getId());
-						appointment.setAppointmentDate(date);
-						appointment.setPhysicianName(phy.getFullName());
-						appointment.setPatientID(patientID);
-						appointment.setTiming(time);
-						appointment.setTreatment(treatment);
-						availableApps.add(appointment);
-					}
+			availableApps.addAll(getAvailableAppointments(timings, phy, exp, patientID, date, 1));
+		}
+		bookAppointment(availableApps);
+		
+	}
+	
+	public void bookAppointmentByPhysician(int patientID) {
+		List<String> headers = new ArrayList<>();
+		headers.add("Physician ID");
+		headers.add("Physician Name");
+		List<List<String>> rows = new ArrayList<>();
+		for(Physician phy: physicians.values()) {
+			List<String> row = new ArrayList<>();
+			row.add(""+phy.getId());
+			row.add(phy.getFullName());
+			rows.add(row);
+		}
+		PrintTable table = new PrintTable();
+		table.print(rows, headers);
+		System.out.print("Please enter the Physician ID of whom you want to book appointment: ");
+		int id = Utils.readInteger();
+		Physician physician = physicians.get(id);
+		System.out.print("Please enter the date on which you are looking to book appointment in dd-mm-yyyy format: ");
+		String date = Utils.readString();
+		boolean isValid =false;
+		try {
+			isValid = Utils.validateDate(date);
+		}catch(Exception e) {
+			System.out.println("Date entered is not valid. Please try again and enter valid date");
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+		}
+		if(!isValid) {
+			return;
+		}
+		int day = Utils.getDayFromDate(date);
+		if(physician.getTimings().get(day)==null) {
+			System.out.println(physician.getFullName()+" doesn't work on the selected date.");
+			return;
+		}else {
+			List<String> timings = physician.getTimings().get(day);
+			List<Appointment> availableAppointments =getAvailableAppointments(timings, physician, "", patientID, date, 2);
+			bookAppointment(availableAppointments);
+		}
+		
+	}
+	
+	public List<Appointment> getAvailableAppointments(List<String> timings, Physician physician, String exp, int patientID, String date, int option) {
+		List<Appointment> availableAppointments = new ArrayList<>();
+		List<Appointment> apps = null;
+		if(appointments.get(date)!=null)
+			apps= appointments.get(date).get(physician.getId());
+		for(String time: timings) {
+			if(apps==null || verifyAvailability(time, apps)) {
+				List<String> treatments;
+				if(option == 2) {
+					treatments = physician.getTreatmentsOffered();
+				}else {
+					treatments = physician.getExpToTreatments().get(exp);
+				}
+				for(String treatment: treatments) {
+					List<String> availableRooms = getAvailableRooms(date, time, treatment);
+					if(availableRooms.size()==0)
+						continue;
+					Appointment appointment = new Appointment();
+					appointment.setPhysicianID(physician.getId());
+					appointment.setAppointmentDate(date);
+					appointment.setPhysicianName(physician.getFullName());
+					appointment.setPatientID(patientID);
+					appointment.setPatientName(patients.get(patientID).getFullName());
+					appointment.setTiming(time);
+					appointment.setTreatment(treatment);
+					appointment.setRoom(availableRooms.get(0));
+					availableAppointments.add(appointment);
 				}
 			}
 		}
-		if(availableApps.size()==0){
+		
+		return availableAppointments;
+	}
+	
+	public List<String> getAvailableRooms(String date, String time, String treatment) {
+		List<String> rooms = treatmentToRooms.get(treatment);
+		List<String> availableRooms = new ArrayList<>();
+		for(String room: rooms) {
+			if(roomToAppointment.get(date)!=null) {
+				if(roomToAppointment.get(date).get(room)!=null) {
+					List<Appointment> apps = roomToAppointment.get(date).get(room);
+					boolean isBooked = false;
+					for(Appointment app: apps) {
+						if(verifyOverlapping(app.getTiming(), time) && app.isCancelled()==false) {
+							isBooked =true;
+							break;
+						}
+						
+					}
+					if(!isBooked)
+						availableRooms.add(room);
+				}else {
+					availableRooms.add(room);
+				}
+			}else {
+				availableRooms.add(room);
+			}
+		}
+		
+		return availableRooms;
+	}
+	
+	public boolean verifyOverlapping(String time1, String time2) {
+		List<Integer> list1 = getHours(time1);
+		List<Integer> list2 = getHours(time2);
+		
+		if(list1.contains(list2.get(1)))
+			return true;
+		
+		
+		
+		return false;
+	}
+	
+	public List<Integer> getHours(String time){
+		List<Integer> hours = new ArrayList<>();
+		int startHour = Integer.parseInt(time.split("-")[0]);
+		hours.add(startHour);
+		hours.add(startHour+1);
+		hours.add(startHour+2);
+		
+		return hours;
+	}
+	
+	public void bookAppointment(List<Appointment> availableAppointments) {
+		if(availableAppointments.size()==0){
 			System.out.println("No appointments available for the selected day. please try with some other date");
 			return;
 		}
-		System.out.println("s.no\tPhysician Name\tTreatment Name\t\tAppointment Timing");
-		for(int i=0;i<availableApps.size(); i++) {
-			Appointment appointment = availableApps.get(i);
-			System.out.println(i+1+".\t"+appointment.getPhysicianName()+"\t"+appointment.getTreatment()+"\t\t"+appointment.getTiming());
+		List<String> headers = new ArrayList<>();
+		headers.add("s.no");
+		headers.add("Physician Name");
+		headers.add("Treatment Name");
+		headers.add("Appointment Timing");
+		List<List<String>> rows = new ArrayList<>();
+		for(int i=0;i<availableAppointments.size(); i++) {
+			Appointment appointment = availableAppointments.get(i);
+			List<String> row = new ArrayList<>();
+			row.add(""+(i+1));
+			row.add(appointment.getPhysicianName());
+			row.add(appointment.getTreatment());
+			row.add(appointment.getTiming());
+			rows.add(row);
 		}
-		System.out.print("Please select one of the above appointments: ");
-		int num = sc.nextInt();
-		Appointment app = availableApps.get(num-1);
+		PrintTable table = new PrintTable();
+		table.print(rows, headers);
+		System.out.println();
+		System.out.print("Please select s.no of the above appointments: ");
+		int num = Utils.readInteger();
+		Appointment app = availableAppointments.get(num-1);
 		blockAppointment(app);
-		
 	}
+	
 	
 	
 	
@@ -413,7 +593,30 @@ public class AppointmentManager {
 			appointmentsByPatient.get(app.getPatientID()).add(app);
 		}
 		
+		if(roomToAppointment.get(app.getAppointmentDate())==null) {
+			Map<String,List<Appointment>> roomToApp = new HashMap<>();
+			roomToApp.put(app.getRoom(), new ArrayList<>());
+			roomToApp.get(app.getRoom()).add(app);
+			roomToAppointment.put(app.getAppointmentDate(), roomToApp);
+		}else {
+			Map<String,List<Appointment>> roomToApp = roomToAppointment.get(app.getAppointmentDate());
+			if(roomToApp.get(app.getRoom())==null) {
+				roomToApp.put(app.getRoom(), new ArrayList<>());
+				roomToApp.get(app.getRoom()).add(app);
+			}else {
+				roomToAppointment.get(app.getAppointmentDate()).get(app.getRoom()).add(app);
+			}
+		}
 		System.out.println("Appointment booked successfully. Appointment ID: "+app.getAppointmentID());
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println("Please press enter to return to main menu: ");
+		Utils.readString();
+		
 	}
 	
 	public boolean verifyAvailability(String time, List<Appointment> apps) {
@@ -434,16 +637,255 @@ public class AppointmentManager {
 	}
 	
 	public void cancelAppointment(int patientID, int appointmentID) {
+		if(!appointmentsByPatient.containsKey(patientID)) {
+			System.out.println("No appointments available for patient");
+			return;
+		}
+			
 		List<Appointment> appointments = getAppointmentsByPatientID(patientID);
 		for(Appointment app: appointments) {
 			if(app.getAppointmentID() == appointmentID) {
+				if(app.isAttended()) {
+					System.out.println("Cannot cancel the Attended Appointment");
+					System.out.println("Please press enter to return to main menu");
+					Utils.readString();
+					return;
+				}
+					
 				cancelAppointment(app);
+				System.out.println("Your Appointment has been cancelled successfully.");
+				System.out.println("Please press enter to return to main menu.");
+				Utils.readString();
+				return;
 			}
 		}
+		
+		System.out.println("Appointment with id: "+appointmentID+" is not found for the selected patient");
 	}
 	
 	public synchronized void cancelAppointment(Appointment app) {
 		app.setCancelled(true);
+	}
+	
+	private Map<String, List<VisitorAppointment>> visitorAppointments;
+	
+	public void bookVisitorAppointment(String visitorName, String date) {
+		boolean isValid =false;
+		try {
+			isValid = Utils.validateDate(date);
+		}catch(Exception e) {
+			System.out.println("Date entered is not valid. Please try again and enter valid date");
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
+			}
+		}
+		if(!isValid)
+			return;
+		
+		int day = Utils.getDayFromDate(date);
+		List<Physician> phys = new ArrayList<>();
+		List<VisitorAppointment> availableAppointments = new ArrayList<>();
+		for(Physician phy: physicians.values()) {
+			if(phy.getConsultationHours().containsKey(day)) {
+				availableAppointments.addAll(getVisitorAppointments(phy, visitorName, date, day));
+			}
+		}
+		
+		if(availableAppointments.size()==0) {
+			System.out.println("Appointments for the selected date are not avialable. Please try with some other date");
+			return;
+		}
+		System.out.println("s.no.\tPhysician Name\ttime");
+		for(int i=0; i<availableAppointments.size(); i++) {
+			VisitorAppointment app = availableAppointments.get(i);
+			System.out.println(i+1+"\t"+app.getPhysicianName()+"\t"+app.getTime());
+		}
+		System.out.print("Please select your preferred appointment: ");
+		int option = Utils.readInteger();
+		VisitorAppointment appointment = availableAppointments.get(option-1);
+		if(visitorAppointments.containsKey(date)) {
+			visitorAppointments.get(date).add(appointment);
+		}
+		else {
+			visitorAppointments.put(date, new ArrayList<>());
+			visitorAppointments.get(date).add(appointment);
+		}
+		System.out.println("Appointment booked successfully");
+		System.out.println("Please press enter return to main menu: ");
+		Utils.readString();
+	}
+	
+	public List<VisitorAppointment> getVisitorAppointments(Physician physician, String visitorName, String date, int day) {
+		List<VisitorAppointment> appointments = new ArrayList<>();
+		for(String time: physician.getConsultationHours().get(day)) {
+			if(visitorAppointments.get(date)==null) {
+				VisitorAppointment appointment = new VisitorAppointment();
+				appointment.setPhysicianID(physician.getId());
+				appointment.setDate(date);
+				appointment.setTime(time);
+				appointment.setVisitorName(visitorName);
+				appointment.setPhysicianName(physician.getFullName());
+				appointments.add(appointment);
+			}else {
+				List<VisitorAppointment> apps = visitorAppointments.get(date);
+				boolean isBooked = false;
+				for(VisitorAppointment app: apps) {
+					if(app.time.equals(time)) {
+						isBooked = true;
+						break;
+					}
+				}
+				if(!isBooked) {
+					VisitorAppointment appointment = new VisitorAppointment();
+					appointment.setPhysicianID(physician.getId());
+					appointment.setDate(date);
+					appointment.setTime(time);
+					appointment.setVisitorName(visitorName);
+					appointment.setPhysicianName(physician.getFullName());
+					appointments.add(appointment);
+				}
+					
+			}
+		}
+		
+		return appointments;
+	}
+	
+	public void markAppointment(int patientID, int appointmentID) {
+		if(!appointmentsByPatient.containsKey(patientID)) {
+			System.out.println("No Appointments are booked by this patient.");
+			return;
+		}
+		List<Appointment> apps = getAppointmentsByPatientID(patientID);
+		for(Appointment app: apps) {
+			if(app.getAppointmentID()==appointmentID) {
+				if(app.isCancelled()) {
+					System.out.println("This appointment has been cancelled. Cannot attend a cancelled appoointment");
+					return ;
+				}
+				app.setAttended(true);
+				System.out.println("Appointment has been marked active");
+				return ;
+			}
+		}
+		System.out.println("Appointment with ID "+appointmentID+" is not found for patient");
+		
+	}
+	
+	public void generateReport() {
+		generateAppointmentReport();
+		generateVisitorAppointmentReport();
+	}
+	
+	public void generateAppointmentReport() {
+		List<String> headers = new ArrayList<>();
+		headers.add("Physician Name");
+		headers.add("Treatment Name");
+		headers.add("Patient Name");
+		headers.add("Date");
+		headers.add("Time");
+		headers.add("Room");
+		List<List<String>> rows = new ArrayList<>();
+		
+		for(Map<Integer, List<Appointment>> apps: appointments.values()) {
+			for(int i: apps.keySet()) {
+				for(Appointment app: apps.get(i)) {
+					List<String> row = new ArrayList<>();
+					row.add(app.getPhysicianName());
+					row.add(app.getTreatment());
+					row.add(app.getPatientName());
+					row.add(app.getAppointmentDate());
+					row.add(app.getTiming());
+					row.add(app.getRoom());
+					rows.add(row);
+				}
+			}
+		}
+		System.out.println("Patient Appointments: ");
+		if(rows.size()==0) {
+			System.out.println("No Patient Appointments are Booked");
+			return;
+		}
+		PrintTable print = new PrintTable();
+		print.print(rows, headers);
+		
+	}
+	
+	public void generateVisitorAppointmentReport() {
+		List<String> headers = new ArrayList<>();
+		headers.add("Physician Name");
+		headers.add("Visitor Name");
+		headers.add("Date");
+		headers.add("Time");
+		List<List<String>> rows = new ArrayList<>();
+		
+		for(List<VisitorAppointment> apps: visitorAppointments.values()) {
+			for(VisitorAppointment app: apps) {
+				List<String> row = new ArrayList<>();
+				row.add(app.getPhysicianName());
+				row.add(app.getVisitorName());
+				row.add(app.getDate());
+				row.add(app.getTime());
+				rows.add(row);
+			}
+			
+		}
+		System.out.println("Visitor Appointments: ");
+		if(rows.size()==0) {
+			System.out.println("No Visitor Appointments are booked");
+			return;
+		}
+		PrintTable print = new PrintTable();
+		print.print(rows, headers);
+	
+	}
+	
+	public void generatePatientsReport() {
+		List<String> headers = new ArrayList<>();
+		headers.add("Patient ID");
+		headers.add("Patient Name");
+		headers.add("Appointment ID");
+		headers.add("Is Attended");
+		headers.add("Is Cancelled");
+		headers.add("Is Missed");
+		List<List<String>> rows = new ArrayList<>();
+		for(List<Appointment> apps: appointmentsByPatient.values()) {
+			for(Appointment app: apps) {
+				List<String> row = new ArrayList<>();
+				row.add(""+app.getPatientID());
+				row.add(app.getPatientName());
+				row.add(""+app.getAppointmentID());
+				if(app.isAttended())
+					row.add("Yes");
+				else
+					row.add("No");
+				if(app.isCancelled())
+					row.add("Yes");
+				else
+					row.add("No");
+				if(app.isCancelled())
+					row.add("No");
+				else if(!app.isAttended())
+					row.add("Yes");
+				else
+					row.add("No");
+				
+				rows.add(row);
+				
+			}
+			
+		}
+		
+		System.out.println("Appointments report per patient:");
+		if(rows.size()==0) {
+			System.out.println("No Appointments Booked");
+			return;
+		}
+		PrintTable table = new PrintTable();
+		table.print(rows, headers);
+		
 	}
 	
 	
